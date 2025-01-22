@@ -1,0 +1,1 @@
+# Adtelligent Junior Golang Engineer Test Task by Danyil Rozumovskyi
