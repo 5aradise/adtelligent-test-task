@@ -16,7 +16,9 @@ type (
 	}
 
 	DB struct {
-		URL string `yaml:"url"`
+		URL               string        `yaml:"url"`
+		UpdateCacheDelay  time.Duration `yaml:"updateCacheDelay"`
+		BigRequestTimeout time.Duration `yaml:"bigRequestTimeout"`
 	}
 
 	Server struct {

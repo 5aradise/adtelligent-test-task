@@ -30,7 +30,7 @@ func main() {
 
 	cfg, err := config.New(configPath)
 	if err != nil {
-		log.Fatal("can't load config", err)
+		log.Fatal("can't load config: ", err)
 	}
 
 	l := logger.New(os.Stdout, cfg.Env)
@@ -43,7 +43,7 @@ func main() {
 	defer conn.Close()
 
 	l.Info("init app storage")
-	s := storage.New(conn, l)
+	s := storage.New(conn, l, cfg.DB.BigRequestTimeout, cfg.DB.UpdateCacheDelay)
 
 	l.Info("init auction service")
 	as := auctionService.New(s, l)
