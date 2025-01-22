@@ -75,8 +75,9 @@ func (s *service) GetProfitCreative(sourceId int, maxDuration time.Duration) (mo
 
 		for _, creative := range creatives {
 			l = l.With(slog.Int("creative_id", creative.ID))
-			if creative.Duration > maxDuration {
-				s.l.Debug("creative takes longer than max duration", slog.Duration("creative_duration", creative.Duration), slog.Duration("max_duration", maxDuration))
+			creativeDuration := time.Duration(creative.DurationInMs) * time.Millisecond
+			if creativeDuration > maxDuration {
+				s.l.Debug("creative takes longer than max duration", slog.Duration("creative_duration", creativeDuration), slog.Duration("max_duration", maxDuration))
 				continue
 			}
 
@@ -86,7 +87,7 @@ func (s *service) GetProfitCreative(sourceId int, maxDuration time.Duration) (mo
 		}
 	}
 
-	if bestCreative == maxPriceCreative {
+	if bestCreative.ID == 0 {
 		return models.Creative{}, util.OpWrap(op, ErrCreativeUnfound)
 	}
 	return bestCreative, nil

@@ -24,8 +24,8 @@ CREATE TABLE IF NOT EXISTS creatives (
     id SERIAL PRIMARY KEY,
     campaign_id INT NOT NULL,
     cents_per_view INT NOT NULL,
-    duration_in_sec INT NOT NULL,
-    hls_playlist_path VARCHAR(256) NOT NULL,
+    duration_in_ms INT NOT NULL,
+    hls_playlist BYTEA NOT NULL,
     FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE
 );
 

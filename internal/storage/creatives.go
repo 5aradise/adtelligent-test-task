@@ -28,7 +28,7 @@ func (s *storage) ListCreativesByCampaignId(ctx context.Context, campaignID int)
 }
 
 const listCreativesByCampaignId = `
-SELECT id, campaign_id, cents_per_view, duration_in_sec, hls_playlist_path FROM creatives
+SELECT id, campaign_id, cents_per_view, duration_in_ms, hls_playlist FROM creatives
 WHERE campaign_id = $1
 `
 
@@ -47,8 +47,8 @@ func (s *storage) listCreativesByCampaignId(ctx context.Context, campaignID int)
 			&c.ID,
 			&c.CampaignID,
 			&c.Price,
-			&c.Duration,
-			&c.HlsPlaylistPath,
+			&c.DurationInMs,
+			&c.HlsPlaylist,
 		); err != nil {
 			return nil, util.OpWrap(op, err)
 		}
@@ -64,7 +64,7 @@ func (s *storage) listCreativesByCampaignId(ctx context.Context, campaignID int)
 }
 
 const listCreativesTemplate = `
-SELECT id, campaign_id, cents_per_view, duration_in_sec, hls_playlist_path FROM creatives
+SELECT id, campaign_id, cents_per_view, duration_in_ms, hls_playlist FROM creatives
 WHERE campaign_id IN (%s) 
 `
 
@@ -96,8 +96,8 @@ func (s *storage) listCreativesByCampaignIds(ids []int) (map[int][]models.Creati
 			&creative.ID,
 			&creative.CampaignID,
 			&creative.Price,
-			&creative.Duration,
-			&creative.HlsPlaylistPath,
+			&creative.DurationInMs,
+			&creative.HlsPlaylist,
 		); err != nil {
 			return nil, util.OpWrap(op, err)
 		}
