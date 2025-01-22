@@ -32,7 +32,7 @@ func New[K comparable, V any](logger *slog.Logger, loadValuesFunc func([]K) (map
 func (c *cache[K, V]) run(loadValues func([]K) (map[K]V, error), updateDelay time.Duration) {
 	t := time.NewTicker(updateDelay)
 	var err error
-	c.l.Info("start cache", slog.Duration("update delay", updateDelay))
+	c.l.Info("start cache", slog.Duration("update_delay", updateDelay))
 	for range t.C {
 		err = c.update(loadValues)
 		if err != nil {
@@ -62,7 +62,7 @@ func (c *cache[K, V]) update(loadValues func([]K) (map[K]V, error)) error {
 	}
 
 	c.data = newData
-	c.l.Debug("cache data replaced", slog.Any("new data", newData))
+	c.l.Debug("cache data replaced", slog.Any("new_data", newData))
 	return nil
 }
 

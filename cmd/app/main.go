@@ -18,6 +18,7 @@ import (
 	"github.com/5aradise/adtelligent-test-task/pkg/db/postgresql"
 	"github.com/5aradise/adtelligent-test-task/pkg/httpserver"
 	"github.com/5aradise/adtelligent-test-task/pkg/logger"
+	"github.com/5aradise/adtelligent-test-task/pkg/middleware"
 	"github.com/5aradise/adtelligent-test-task/pkg/util"
 )
 
@@ -47,13 +48,11 @@ func main() {
 
 	l.Info("init auction service")
 	as := auctionService.New(s, l)
-
 	l.Info("init auction handler")
 	ah := auctionHandler.New(as, l)
 
 	l.Info("init stitching service")
 	ss := stitchingService.New(auctionURL, l)
-
 	l.Info("init stitching handler")
 	sh := stitchingHandler.New(ss, l)
 
@@ -63,7 +62,12 @@ func main() {
 	sh.Init(router)
 
 	server := httpserver.New(
-		http.NewServeMux(),
+		middleware.Use(router,
+			middleware.Recoverer(l),
+			middleware.Cors(l),
+			middleware.RequestID(l),
+			middleware.Logger(l),
+		),
 		httpserver.Port(cfg.Server.Port),
 		httpserver.ReadTimeout(cfg.Server.Timeout),
 		httpserver.IdleTimeout(cfg.Server.IdleTimeout),
