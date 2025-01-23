@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"log/slog"
-	"math"
 	"time"
 
 	"github.com/5aradise/adtelligent-test-task/internal/models"
@@ -34,7 +33,7 @@ func New(storage auctionStorage, logger *slog.Logger) *service {
 	}
 }
 
-var maxPriceCreative = models.Creative{Price: math.MaxInt32}
+var minPriceCreative = models.Creative{}
 
 func (s *service) GetProfitCreative(sourceId int, maxDuration time.Duration) (models.Creative, error) {
 	const op = "service.GetProfitCreative"
@@ -53,7 +52,7 @@ func (s *service) GetProfitCreative(sourceId int, maxDuration time.Duration) (mo
 	}
 
 	now := time.Now()
-	bestCreative := maxPriceCreative
+	bestCreative := minPriceCreative
 	for _, campaignId := range source.CampaignIds {
 		campaign, err := s.stor.GetCampaignById(context.Background(), campaignId)
 		l = l.With(slog.Int("campaign_id", campaignId))
@@ -81,7 +80,7 @@ func (s *service) GetProfitCreative(sourceId int, maxDuration time.Duration) (mo
 				continue
 			}
 
-			if creative.Price < bestCreative.Price {
+			if creative.Price > bestCreative.Price {
 				bestCreative = creative
 			}
 		}

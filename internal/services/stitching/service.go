@@ -130,7 +130,7 @@ func (s *service) getAdPlaylist(sourceId int, maxDuration time.Duration) ([]byte
 	}
 
 	header := []byte("#EXT-X-CUE-OUT:" +
-		strconv.Itoa(structResp.DurationInMs/1000) + "." + strconv.Itoa(structResp.DurationInMs%1000) +
+		strconv.Itoa(structResp.DurationInMs/1000) + "." + fmt.Sprintf("%.3d", structResp.DurationInMs%1000) +
 		"\n")
 
 	return append(header, structResp.AdPlaylist...), nil
