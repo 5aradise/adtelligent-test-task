@@ -1,0 +1,12 @@
+env: local
+db:
+  url: postgres://user:password@address:port/adtelligent
+  updateCacheDelay: 60s
+  bigRequestTimeout: 5s
+server:
+  port: 80
+  timeout: 4s
+  idleTimeout: 60s
+stitching:
+  auctionUrl: http://address:port/auction
+  requestTimeout: 1s

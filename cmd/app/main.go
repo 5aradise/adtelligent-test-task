@@ -22,8 +22,6 @@ import (
 	"github.com/5aradise/adtelligent-test-task/pkg/util"
 )
 
-const auctionURL = "/auction"
-
 var configPath = *flag.String("config", "./config.yaml", "Path to config file")
 
 func main() {
@@ -52,7 +50,7 @@ func main() {
 	ah := auctionHandler.New(as, l)
 
 	l.Info("init stitching service")
-	ss := stitchingService.New(auctionURL, l)
+	ss := stitchingService.New(cfg.Stitching.AuctionUrl, l, cfg.Stitching.RequestTimeout)
 	l.Info("init stitching handler")
 	sh := stitchingHandler.New(ss, l)
 

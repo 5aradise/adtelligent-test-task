@@ -10,9 +10,10 @@ import (
 
 type (
 	Config struct {
-		Env    string `yaml:"env"`
-		DB     DB     `yaml:"db"`
-		Server Server `yaml:"server"`
+		Env       string    `yaml:"env"`
+		DB        DB        `yaml:"db"`
+		Server    Server    `yaml:"server"`
+		Stitching Stitching `yaml:"stitching"`
 	}
 
 	DB struct {
@@ -25,6 +26,11 @@ type (
 		Port        string        `yaml:"port"`
 		Timeout     time.Duration `yaml:"timeout"`
 		IdleTimeout time.Duration `yaml:"idleTimeout"`
+	}
+
+	Stitching struct {
+		AuctionUrl     string        `yaml:"auctionUrl"`
+		RequestTimeout time.Duration `yaml:"requestTimeout"`
 	}
 )
 

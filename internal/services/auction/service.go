@@ -58,18 +58,18 @@ func (s *service) GetProfitCreative(sourceId int, maxDuration time.Duration) (mo
 		campaign, err := s.stor.GetCampaignById(context.Background(), campaignId)
 		l = l.With(slog.Int("campaign_id", campaignId))
 		if err != nil {
-			s.l.Warn("cannot get campaign by id", util.SlErr(err))
+			l.Warn("cannot get campaign by id", util.SlErr(err))
 			continue
 		}
 
 		if !(campaign.StartTime.Before(now) && campaign.EndTime.After(now)) {
-			s.l.Debug("campaign doesn't fit into time frame", slog.Time("now", now), slog.Time("start", campaign.StartTime), slog.Time("end", campaign.EndTime))
+			l.Debug("campaign doesn't fit into time frame", slog.Time("now", now), slog.Time("start", campaign.StartTime), slog.Time("end", campaign.EndTime))
 			continue
 		}
 
 		creatives, err := s.stor.ListCreativesByCampaignId(context.Background(), campaign.ID)
 		if err != nil {
-			s.l.Warn("cannot list creatives by campaign id", util.SlErr(err))
+			l.Warn("cannot list creatives by campaign id", util.SlErr(err))
 			continue
 		}
 
@@ -77,7 +77,7 @@ func (s *service) GetProfitCreative(sourceId int, maxDuration time.Duration) (mo
 			l = l.With(slog.Int("creative_id", creative.ID))
 			creativeDuration := time.Duration(creative.DurationInMs) * time.Millisecond
 			if creativeDuration > maxDuration {
-				s.l.Debug("creative takes longer than max duration", slog.Duration("creative_duration", creativeDuration), slog.Duration("max_duration", maxDuration))
+				l.Debug("creative takes longer than max duration", slog.Duration("creative_duration", creativeDuration), slog.Duration("max_duration", maxDuration))
 				continue
 			}
 
