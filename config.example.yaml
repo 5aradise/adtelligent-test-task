@@ -1,4 +1,4 @@
-env: local
+env: prod
 db:
   url: postgres://user:password@address:port/adtelligent
   updateCacheDelay: 60s
