@@ -51,6 +51,18 @@ func WriteJSON(w http.ResponseWriter, statusCode int, v any) error {
 	return nil
 }
 
+func WriteM3U8(w http.ResponseWriter, statusCode int, data []byte) error {
+	const op = "api.WriteM3U8"
+
+	w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
+	w.WriteHeader(statusCode)
+	_, err := w.Write(data)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+	return nil
+}
+
 func WriteError(w http.ResponseWriter, statusCode int, msg string) error {
 	const op = "api.WtireError"
 
