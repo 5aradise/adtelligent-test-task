@@ -23,9 +23,10 @@ type (
 	}
 
 	Server struct {
-		Port        string        `yaml:"port"`
-		Timeout     time.Duration `yaml:"timeout"`
-		IdleTimeout time.Duration `yaml:"idleTimeout"`
+		AuctionPort   string        `yaml:"auctionPort"`
+		StitchingPort string        `yaml:"stitchingPort"`
+		Timeout       time.Duration `yaml:"timeout"`
+		IdleTimeout   time.Duration `yaml:"idleTimeout"`
 	}
 
 	Stitching struct {

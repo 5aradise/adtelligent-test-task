@@ -1,5 +1,11 @@
-build:
-	go build -C cmd/app/ -o ../../bin/
+build-auction:
+	go build -C cmd/auction/ -o ../../bin/
 
-run: build
-	./bin/app
+build-stitching:
+	go build -C cmd/stitching/ -o ../../bin/
+
+run-auction: build-auction
+	./bin/auction
+
+run-stitching: build-stitching
+	./bin/stitching

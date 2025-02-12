@@ -11,9 +11,7 @@ import (
 
 	"github.com/5aradise/adtelligent-test-task/config"
 	auctionHandler "github.com/5aradise/adtelligent-test-task/internal/controllers/http/auction"
-	stitchingHandler "github.com/5aradise/adtelligent-test-task/internal/controllers/http/stitching"
 	auctionService "github.com/5aradise/adtelligent-test-task/internal/services/auction"
-	stitchingService "github.com/5aradise/adtelligent-test-task/internal/services/stitching"
 	"github.com/5aradise/adtelligent-test-task/internal/storage"
 	"github.com/5aradise/adtelligent-test-task/pkg/db/postgresql"
 	"github.com/5aradise/adtelligent-test-task/pkg/httpserver"
@@ -49,15 +47,8 @@ func main() {
 	l.Info("init auction handler")
 	ah := auctionHandler.New(as, l)
 
-	l.Info("init stitching service")
-	ss := stitchingService.New(cfg.Stitching.AuctionUrl, l, cfg.Stitching.RequestTimeout)
-	l.Info("init stitching handler")
-	sh := stitchingHandler.New(ss, l)
-
 	router := http.NewServeMux()
-
 	ah.Init(router)
-	sh.Init(router)
 
 	server := httpserver.New(
 		middleware.Use(router,
@@ -66,10 +57,10 @@ func main() {
 			middleware.RequestID(l),
 			middleware.Logger(l),
 		),
-		httpserver.Port(cfg.Server.Port),
+		httpserver.Port(cfg.Server.AuctionPort),
 		httpserver.ReadTimeout(cfg.Server.Timeout),
 		httpserver.IdleTimeout(cfg.Server.IdleTimeout),
-		httpserver.ErrorLog(slog.NewLogLogger(l.With(slog.String("source", "httpserver")).Handler(), slog.LevelError)),
+		httpserver.ErrorLog(slog.NewLogLogger(l.With(slog.String("source", "auction-server")).Handler(), slog.LevelError)),
 	)
 
 	interrupt := make(chan os.Signal, 1)
