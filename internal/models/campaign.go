@@ -8,3 +8,7 @@ type Campaign struct {
 	StartTime time.Time `json:"start_time"`
 	EndTime   time.Time `json:"end_time"`
 }
+
+func (c Campaign) IsActive(relativeTime time.Time) bool {
+	return c.StartTime.Before(relativeTime) && c.EndTime.After(relativeTime)
+}

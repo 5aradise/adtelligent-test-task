@@ -27,6 +27,33 @@ func (s *storage) GetCampaignById(ctx context.Context, id int) (models.Campaign,
 	return campaign, nil
 }
 
+func (s *storage) ListCampaignsByIds(ctx context.Context, ids []int) ([]models.Campaign, error) {
+	const op = "storage.ListCampaignsByIds"
+
+	campaigns := make([]models.Campaign, 0, len(ids))
+	var idsToGetFromDB []int
+	for _, id := range ids {
+		campaign, ok := s.campaignsCache.Load(id)
+		if ok {
+			campaigns = append(campaigns, campaign)
+		} else {
+			idsToGetFromDB = append(idsToGetFromDB, id)
+		}
+	}
+
+	fromDBs, err := s.listCampaignsByIds(idsToGetFromDB)
+	if err != nil {
+		return nil, util.OpWrap(op, err)
+	}
+
+	for id, fromDB := range fromDBs {
+		campaigns = append(campaigns, fromDB)
+		s.campaignsCache.Store(id, fromDB)
+	}
+
+	return campaigns, nil
+}
+
 const getCampaignById = `
 SELECT id, name, start_time, end_time FROM campaigns
 WHERE id = $1

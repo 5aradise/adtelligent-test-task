@@ -1,18 +1,19 @@
 package stitching
 
 import (
-	"bufio"
-	"bytes"
-	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
-	"strconv"
 	"time"
 
+	"github.com/5aradise/adtelligent-test-task/pkg/m3u8"
 	"github.com/5aradise/adtelligent-test-task/pkg/util"
+)
+
+var (
+	ErrAdStartUnfound = errors.New("ad start is unfound in playlist")
+	ErrAdEndUnfound   = errors.New("ad end is unfound in playlist")
 )
 
 type service struct {
@@ -36,102 +37,39 @@ func (s *service) ModifyPlaylist(sourceId int, playlist io.Reader) ([]byte, erro
 		slog.Int("source_id", sourceId),
 	)
 
-	var updatedPlaylist []byte
-	var startAdLine []byte
-	var isStartFound, isEndFound bool
+	var (
+		updatedPlaylist = make([]byte, 0, 1024)
+		playlistLines   = m3u8.NewLines(playlist)
+	)
 
-	scanner := bufio.NewScanner(playlist)
-
-	// search for start of ad
-	for scanner.Scan() {
-		line := scanner.Bytes()
-
-		if bytes.HasPrefix(line, []byte("#EXT-X-CUE-OUT:")) {
-			startAdLine = bytes.TrimRight(line, " ")
-			isStartFound = true
-			break
-		}
-
-		updatedPlaylist = appendLine(updatedPlaylist, line)
+	updatedPlaylist, adStart := m3u8.SearchAdStart(playlistLines, updatedPlaylist)
+	if adStart == nil {
+		l.Info("ad start is unfound in playlist", slog.String("playlist", string(updatedPlaylist)))
+		return nil, util.OpWrap(op, ErrAdStartUnfound)
 	}
-	if !isStartFound {
-		l.Debug("ad start is unfound in playlist", slog.String("playlist", string(updatedPlaylist)))
-		return updatedPlaylist, nil
-	}
-
-	// insert ad
-	adDurationInSec, err := strconv.ParseFloat(string(startAdLine[15:]), 64)
+	adDuration, err := m3u8.ExtractAdDuration(adStart)
 	if err != nil {
-		return nil, err
+		l.Info("failed to extract ad duration", util.SlErr(err), slog.Any("ad_line", adStart))
+		return nil, util.OpWrap(op, err)
 	}
-	maxDuration := time.Duration(adDurationInSec) * time.Second
-	adPlaylist, err := s.getAdPlaylist(sourceId, maxDuration)
+
+	adPlaylist, err := s.getAdPlaylist(sourceId, adDuration)
 	if err != nil {
-		l.Debug("failed to retrieve ad playlist", util.SlErr(err), slog.Duration("maxDuration", maxDuration))
-		return nil, err
+		l.Warn("failed to retrieve ad playlist", util.SlErr(err), slog.Duration("ad_duration", adDuration))
+		return nil, util.OpWrap(op, err)
 	}
-	updatedPlaylist = appendLine(updatedPlaylist, adPlaylist)
+	updatedPlaylist = m3u8.AppendLine(updatedPlaylist, adPlaylist)
 
 	// skip replaced part and search for end of ad
-	for scanner.Scan() {
-		line := scanner.Bytes()
-
-		if bytes.Equal(line, []byte("#EXT-X-CUE-IN")) {
-			updatedPlaylist = appendLine(updatedPlaylist, line)
-			isEndFound = true
-			break
-		}
+	_, adEnd := m3u8.SearchAdEnd(playlistLines, nil)
+	if adEnd == nil {
+		l.Info("ad end is unfound in playlist", slog.String("playlist", string(updatedPlaylist)))
+		return nil, util.OpWrap(op, ErrAdEndUnfound)
 	}
-	if !isEndFound {
-		l.Debug("ad end is unfound in playlist", slog.String("playlist", string(updatedPlaylist)))
-		return nil, err
-	}
+	updatedPlaylist = m3u8.AppendLine(updatedPlaylist, adEnd)
 
 	// add rest
-	for scanner.Scan() {
-		line := scanner.Bytes()
-
-		updatedPlaylist = appendLine(updatedPlaylist, line)
-	}
+	updatedPlaylist = m3u8.AppendLines(updatedPlaylist, playlistLines)
 
 	return updatedPlaylist, nil
-}
-
-func appendLine(sl, line []byte) []byte {
-	return append(sl, append(line, byte('\n'))...)
-}
-
-type AdPlaylistResponse struct {
-	DurationInMs int    `json:"duracion_in_ms"`
-	AdPlaylist   []byte `json:"hls_playlist"`
-}
-
-func (s *service) getAdPlaylist(sourceId int, maxDuration time.Duration) ([]byte, error) {
-	const op = "service.GetProfitCreative"
-
-	resp, err := s.client.Get(s.url + fmt.Sprintf("?sourceID=%d&maxDuration=%s", sourceId, maxDuration.String()))
-	if err != nil {
-		return nil, util.OpWrap(op, err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		errorData, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return nil, util.OpWrap(op, err)
-		}
-		return nil, util.OpWrap(op, errors.New(string(errorData)))
-	}
-
-	var structResp AdPlaylistResponse
-	err = json.NewDecoder(resp.Body).Decode(&structResp)
-	if err != nil {
-		return nil, util.OpWrap(op, err)
-	}
-
-	header := []byte("#EXT-X-CUE-OUT:" +
-		strconv.Itoa(structResp.DurationInMs/1000) + "." + fmt.Sprintf("%.3d", structResp.DurationInMs%1000) +
-		"\n")
-
-	return append(header, structResp.AdPlaylist...), nil
 }

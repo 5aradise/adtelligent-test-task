@@ -13,7 +13,7 @@ import (
 )
 
 type auctionService interface {
-	GetProfitCreative(sourceId int, maxDuration time.Duration) (models.Creative, error)
+	GetProfitCreative(sourceId int, maxDuration time.Duration, relativeTime time.Time) (models.Creative, error)
 }
 
 type handler struct {
@@ -73,7 +73,7 @@ func (h *handler) handleAuction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	creative, err := h.as.GetProfitCreative(sourceID, maxDuration)
+	creative, err := h.as.GetProfitCreative(sourceID, maxDuration, time.Now())
 	if err != nil {
 		err := api.WriteError(w, http.StatusBadRequest, err.Error())
 		if err != nil {

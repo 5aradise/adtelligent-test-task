@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/5aradise/adtelligent-test-task/internal/models"
+	"github.com/5aradise/adtelligent-test-task/pkg/slices"
 	"github.com/5aradise/adtelligent-test-task/pkg/util"
 )
 
@@ -17,7 +19,7 @@ var (
 
 type auctionStorage interface {
 	GetSourceById(ctx context.Context, id int) (models.Source, error)
-	GetCampaignById(ctx context.Context, id int) (models.Campaign, error)
+	ListCampaignsByIds(ctx context.Context, ids []int) ([]models.Campaign, error)
 	ListCreativesByCampaignId(ctx context.Context, id int) ([]models.Creative, error)
 }
 
@@ -33,9 +35,7 @@ func New(storage auctionStorage, logger *slog.Logger) *service {
 	}
 }
 
-var minPriceCreative = models.Creative{}
-
-func (s *service) GetProfitCreative(sourceId int, maxDuration time.Duration) (models.Creative, error) {
+func (s *service) GetProfitCreative(sourceId int, maxDuration time.Duration, relativeTime time.Time) (models.Creative, error) {
 	const op = "service.GetProfitCreative"
 	l := s.l.With(
 		slog.String("op", op),
@@ -44,50 +44,84 @@ func (s *service) GetProfitCreative(sourceId int, maxDuration time.Duration) (mo
 
 	source, err := s.stor.GetSourceById(context.Background(), sourceId)
 	if err != nil {
+		l.Warn("cannot get source by id", util.SlErr(err))
+		return models.Creative{}, util.OpWrap(op, err)
+	}
+	if err := isValidSource(source); err != nil {
 		return models.Creative{}, util.OpWrap(op, err)
 	}
 
-	if !source.IsActive {
-		return models.Creative{}, util.OpWrap(op, ErrInactiveSource)
+	campaigns, err := s.stor.ListCampaignsByIds(context.Background(), source.CampaignIds)
+	if err != nil {
+		l.Warn("cannot list campaigns by ids", slog.Any("campaigns_id", source.CampaignIds), util.SlErr(err))
+		return models.Creative{}, util.OpWrap(op, err)
 	}
-
-	now := time.Now()
-	bestCreative := minPriceCreative
-	for _, campaignId := range source.CampaignIds {
-		campaign, err := s.stor.GetCampaignById(context.Background(), campaignId)
-		l = l.With(slog.Int("campaign_id", campaignId))
-		if err != nil {
-			l.Warn("cannot get campaign by id", util.SlErr(err))
+	bestCreatives := make([]models.Creative, len(campaigns))
+	wg := &sync.WaitGroup{}
+	for i, campaign := range campaigns {
+		if !campaign.IsActive(relativeTime) {
 			continue
 		}
 
-		if !(campaign.StartTime.Before(now) && campaign.EndTime.After(now)) {
-			l.Debug("campaign doesn't fit into time frame", slog.Time("now", now), slog.Time("start", campaign.StartTime), slog.Time("end", campaign.EndTime))
-			continue
-		}
+		wg.Add(1)
+		go func() {
+			l = l.With(slog.Int("campaign_id", campaign.ID))
+			defer wg.Done()
 
-		creatives, err := s.stor.ListCreativesByCampaignId(context.Background(), campaign.ID)
-		if err != nil {
-			l.Warn("cannot list creatives by campaign id", util.SlErr(err))
-			continue
-		}
-
-		for _, creative := range creatives {
-			l = l.With(slog.Int("creative_id", creative.ID))
-			creativeDuration := time.Duration(creative.DurationInMs) * time.Millisecond
-			if creativeDuration > maxDuration {
-				l.Debug("creative takes longer than max duration", slog.Duration("creative_duration", creativeDuration), slog.Duration("max_duration", maxDuration))
-				continue
+			creatives, err := s.stor.ListCreativesByCampaignId(context.Background(), campaign.ID)
+			if err != nil {
+				l.Warn("cannot list creatives by campaign id", util.SlErr(err))
+				return
 			}
-
-			if creative.Price > bestCreative.Price {
-				bestCreative = creative
+			bestCreative, isFound := chooseBestCreative(creatives, maxDuration)
+			if isFound {
+				bestCreatives[i] = bestCreative
 			}
-		}
+		}()
 	}
+	wg.Wait()
+	bestCreatives = filterEmptyCreatives(bestCreatives)
 
-	if bestCreative.ID == 0 {
+	bestCreative, isFound := chooseBestCreative(bestCreatives, maxDuration)
+	if !isFound {
 		return models.Creative{}, util.OpWrap(op, ErrCreativeUnfound)
 	}
+
 	return bestCreative, nil
+}
+
+func isValidSource(s models.Source) error {
+	if !s.IsActive {
+		return ErrInactiveSource
+	}
+	return nil
+}
+
+var minPriceCreative = models.Creative{}
+
+func chooseBestCreative(cs []models.Creative, maxDuration time.Duration) (bestCreative models.Creative, isFound bool) {
+	if len(cs) < 1 {
+		return models.Creative{}, false
+	}
+
+	bestCreative = minPriceCreative
+	for _, c := range cs {
+		creativeDuration := time.Duration(c.DurationInMs) * time.Millisecond
+		if creativeDuration > maxDuration {
+			continue
+		}
+		if c.Price > bestCreative.Price {
+			bestCreative = c
+		}
+	}
+	if bestCreative.ID == minPriceCreative.ID {
+		return models.Creative{}, false
+	}
+	return bestCreative, true
+}
+
+func filterEmptyCreatives(cs []models.Creative) []models.Creative {
+	return slices.FilterFunc(cs, func(c models.Creative) bool {
+		return c.ID != 0
+	})
 }
