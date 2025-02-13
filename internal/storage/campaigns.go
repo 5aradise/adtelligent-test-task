@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	"github.com/5aradise/adtelligent-test-task/internal/models"
-	"github.com/5aradise/adtelligent-test-task/pkg/util"
+	"github.com/5aradise/adtelligent-test-task/pkg/ops"
 )
 
 func (s *storage) GetCampaignById(ctx context.Context, id int) (models.Campaign, error) {
@@ -20,7 +20,7 @@ func (s *storage) GetCampaignById(ctx context.Context, id int) (models.Campaign,
 	var err error
 	campaign, err = s.getCampaignById(ctx, id)
 	if err != nil {
-		return models.Campaign{}, util.OpWrap(op, err)
+		return models.Campaign{}, ops.Wrap(op, err)
 	}
 
 	s.campaignsCache.Store(id, campaign)
@@ -43,7 +43,7 @@ func (s *storage) ListCampaignsByIds(ctx context.Context, ids []int) ([]models.C
 
 	fromDBs, err := s.listCampaignsByIds(idsToGetFromDB)
 	if err != nil {
-		return nil, util.OpWrap(op, err)
+		return nil, ops.Wrap(op, err)
 	}
 
 	for id, fromDB := range fromDBs {
@@ -72,7 +72,7 @@ func (s *storage) getCampaignById(ctx context.Context, id int) (models.Campaign,
 		&c.EndTime,
 	)
 	if err != nil {
-		return models.Campaign{}, util.OpWrap(op, err)
+		return models.Campaign{}, ops.Wrap(op, err)
 	}
 	return c, nil
 }
@@ -100,7 +100,7 @@ func (s *storage) listCampaignsByIds(ids []int) (map[int]models.Campaign, error)
 	defer cancel()
 	rows, err := s.db.QueryContext(ctx, fmt.Sprintf(listCampaignsTemplate, strIds), anyIds...)
 	if err != nil {
-		return nil, util.OpWrap(op, err)
+		return nil, ops.Wrap(op, err)
 	}
 	defer rows.Close()
 	campaigns := make(map[int]models.Campaign, len(ids))
@@ -112,15 +112,15 @@ func (s *storage) listCampaignsByIds(ids []int) (map[int]models.Campaign, error)
 			&campaign.StartTime,
 			&campaign.EndTime,
 		); err != nil {
-			return nil, util.OpWrap(op, err)
+			return nil, ops.Wrap(op, err)
 		}
 		campaigns[campaign.ID] = campaign
 	}
 	if err := rows.Close(); err != nil {
-		return nil, util.OpWrap(op, err)
+		return nil, ops.Wrap(op, err)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, util.OpWrap(op, err)
+		return nil, ops.Wrap(op, err)
 	}
 
 	return campaigns, nil

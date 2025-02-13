@@ -25,3 +25,7 @@ func New(w io.Writer, env string) *slog.Logger {
 
 	return log
 }
+
+func Err(err error) slog.Attr {
+	return slog.String("error", err.Error())
+}

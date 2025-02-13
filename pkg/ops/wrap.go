@@ -1,7 +1,7 @@
-package util
+package ops
 
 import "fmt"
 
-func OpWrap(op string, err error) error {
+func Wrap(op string, err error) error {
 	return fmt.Errorf("%s: %w", op, err)
 }

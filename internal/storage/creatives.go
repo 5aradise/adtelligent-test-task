@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	"github.com/5aradise/adtelligent-test-task/internal/models"
-	"github.com/5aradise/adtelligent-test-task/pkg/util"
+	"github.com/5aradise/adtelligent-test-task/pkg/ops"
 )
 
 func (s *storage) ListCreativesByCampaignId(ctx context.Context, campaignID int) ([]models.Creative, error) {
@@ -20,7 +20,7 @@ func (s *storage) ListCreativesByCampaignId(ctx context.Context, campaignID int)
 	var err error
 	creatives, err = s.listCreativesByCampaignId(ctx, campaignID)
 	if err != nil {
-		return nil, util.OpWrap(op, err)
+		return nil, ops.Wrap(op, err)
 	}
 
 	s.creativesCache.Store(campaignID, creatives)
@@ -37,7 +37,7 @@ func (s *storage) listCreativesByCampaignId(ctx context.Context, campaignID int)
 
 	rows, err := s.db.QueryContext(ctx, listCreativesByCampaignId, campaignID)
 	if err != nil {
-		return nil, util.OpWrap(op, err)
+		return nil, ops.Wrap(op, err)
 	}
 	defer rows.Close()
 	var creatives []models.Creative
@@ -50,15 +50,15 @@ func (s *storage) listCreativesByCampaignId(ctx context.Context, campaignID int)
 			&c.DurationInMs,
 			&c.HlsPlaylist,
 		); err != nil {
-			return nil, util.OpWrap(op, err)
+			return nil, ops.Wrap(op, err)
 		}
 		creatives = append(creatives, c)
 	}
 	if err := rows.Close(); err != nil {
-		return nil, util.OpWrap(op, err)
+		return nil, ops.Wrap(op, err)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, util.OpWrap(op, err)
+		return nil, ops.Wrap(op, err)
 	}
 	return creatives, nil
 }
@@ -86,7 +86,7 @@ func (s *storage) listCreativesByCampaignIds(ids []int) (map[int][]models.Creati
 	defer cancel()
 	rows, err := s.db.QueryContext(ctx, fmt.Sprintf(listCreativesTemplate, strIds), anyIds...)
 	if err != nil {
-		return nil, util.OpWrap(op, err)
+		return nil, ops.Wrap(op, err)
 	}
 	defer rows.Close()
 	creatives := make(map[int][]models.Creative, len(ids))
@@ -99,15 +99,15 @@ func (s *storage) listCreativesByCampaignIds(ids []int) (map[int][]models.Creati
 			&creative.DurationInMs,
 			&creative.HlsPlaylist,
 		); err != nil {
-			return nil, util.OpWrap(op, err)
+			return nil, ops.Wrap(op, err)
 		}
 		creatives[creative.CampaignID] = append(creatives[creative.CampaignID], creative)
 	}
 	if err := rows.Close(); err != nil {
-		return nil, util.OpWrap(op, err)
+		return nil, ops.Wrap(op, err)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, util.OpWrap(op, err)
+		return nil, ops.Wrap(op, err)
 	}
 
 	return creatives, nil

@@ -7,8 +7,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/5aradise/adtelligent-test-task/pkg/logger"
 	"github.com/5aradise/adtelligent-test-task/pkg/m3u8"
-	"github.com/5aradise/adtelligent-test-task/pkg/util"
+	"github.com/5aradise/adtelligent-test-task/pkg/ops"
 )
 
 var (
@@ -45,18 +46,18 @@ func (s *service) ModifyPlaylist(sourceId int, playlist io.Reader) ([]byte, erro
 	updatedPlaylist, adStart := m3u8.SearchAdStart(playlistLines, updatedPlaylist)
 	if adStart == nil {
 		l.Info("ad start is unfound in playlist", slog.String("playlist", string(updatedPlaylist)))
-		return nil, util.OpWrap(op, ErrAdStartUnfound)
+		return nil, ops.Wrap(op, ErrAdStartUnfound)
 	}
 	adDuration, err := m3u8.ExtractAdDuration(adStart)
 	if err != nil {
-		l.Info("failed to extract ad duration", util.SlErr(err), slog.Any("ad_line", adStart))
-		return nil, util.OpWrap(op, err)
+		l.Info("failed to extract ad duration", logger.Err(err), slog.Any("ad_line", adStart))
+		return nil, ops.Wrap(op, err)
 	}
 
 	adPlaylist, err := s.getAdPlaylist(sourceId, adDuration)
 	if err != nil {
-		l.Warn("failed to retrieve ad playlist", util.SlErr(err), slog.Duration("ad_duration", adDuration))
-		return nil, util.OpWrap(op, err)
+		l.Warn("failed to retrieve ad playlist", logger.Err(err), slog.Duration("ad_duration", adDuration))
+		return nil, ops.Wrap(op, err)
 	}
 	updatedPlaylist = m3u8.AppendLine(updatedPlaylist, adPlaylist)
 
@@ -64,7 +65,7 @@ func (s *service) ModifyPlaylist(sourceId int, playlist io.Reader) ([]byte, erro
 	_, adEnd := m3u8.SearchAdEnd(playlistLines, nil)
 	if adEnd == nil {
 		l.Info("ad end is unfound in playlist", slog.String("playlist", string(updatedPlaylist)))
-		return nil, util.OpWrap(op, ErrAdEndUnfound)
+		return nil, ops.Wrap(op, ErrAdEndUnfound)
 	}
 	updatedPlaylist = m3u8.AppendLine(updatedPlaylist, adEnd)
 

@@ -8,8 +8,9 @@ import (
 	"time"
 
 	"github.com/5aradise/adtelligent-test-task/internal/models"
+	"github.com/5aradise/adtelligent-test-task/pkg/logger"
+	"github.com/5aradise/adtelligent-test-task/pkg/ops"
 	"github.com/5aradise/adtelligent-test-task/pkg/slices"
-	"github.com/5aradise/adtelligent-test-task/pkg/util"
 )
 
 var (
@@ -44,17 +45,17 @@ func (s *service) GetProfitCreative(sourceId int, maxDuration time.Duration, rel
 
 	source, err := s.stor.GetSourceById(context.Background(), sourceId)
 	if err != nil {
-		l.Warn("cannot get source by id", util.SlErr(err))
-		return models.Creative{}, util.OpWrap(op, err)
+		l.Warn("cannot get source by id", logger.Err(err))
+		return models.Creative{}, ops.Wrap(op, err)
 	}
 	if err := isValidSource(source); err != nil {
-		return models.Creative{}, util.OpWrap(op, err)
+		return models.Creative{}, ops.Wrap(op, err)
 	}
 
 	campaigns, err := s.stor.ListCampaignsByIds(context.Background(), source.CampaignIds)
 	if err != nil {
-		l.Warn("cannot list campaigns by ids", slog.Any("campaigns_id", source.CampaignIds), util.SlErr(err))
-		return models.Creative{}, util.OpWrap(op, err)
+		l.Warn("cannot list campaigns by ids", slog.Any("campaigns_id", source.CampaignIds), logger.Err(err))
+		return models.Creative{}, ops.Wrap(op, err)
 	}
 	bestCreatives := make([]models.Creative, len(campaigns))
 	wg := &sync.WaitGroup{}
@@ -70,7 +71,7 @@ func (s *service) GetProfitCreative(sourceId int, maxDuration time.Duration, rel
 
 			creatives, err := s.stor.ListCreativesByCampaignId(context.Background(), campaign.ID)
 			if err != nil {
-				l.Warn("cannot list creatives by campaign id", util.SlErr(err))
+				l.Warn("cannot list creatives by campaign id", logger.Err(err))
 				return
 			}
 			bestCreative, isFound := chooseBestCreative(creatives, maxDuration)
@@ -84,7 +85,7 @@ func (s *service) GetProfitCreative(sourceId int, maxDuration time.Duration, rel
 
 	bestCreative, isFound := chooseBestCreative(bestCreatives, maxDuration)
 	if !isFound {
-		return models.Creative{}, util.OpWrap(op, ErrCreativeUnfound)
+		return models.Creative{}, ops.Wrap(op, ErrCreativeUnfound)
 	}
 
 	return bestCreative, nil

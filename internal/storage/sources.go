@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	"github.com/5aradise/adtelligent-test-task/internal/models"
-	"github.com/5aradise/adtelligent-test-task/pkg/util"
+	"github.com/5aradise/adtelligent-test-task/pkg/ops"
 )
 
 func (s *storage) GetSourceById(ctx context.Context, id int) (models.Source, error) {
@@ -20,7 +20,7 @@ func (s *storage) GetSourceById(ctx context.Context, id int) (models.Source, err
 	var err error
 	source, err = s.getSourceById(ctx, id)
 	if err != nil {
-		return models.Source{}, util.OpWrap(op, err)
+		return models.Source{}, ops.Wrap(op, err)
 	}
 
 	s.sourcesCache.Store(id, source)
@@ -41,12 +41,12 @@ func (s *storage) getSourceById(ctx context.Context, id int) (models.Source, err
 	row := s.db.QueryRowContext(ctx, getSourceById, id)
 	err := row.Scan(&source.ID, &source.Name, &source.IsActive)
 	if err != nil {
-		return models.Source{}, util.OpWrap(op, err)
+		return models.Source{}, ops.Wrap(op, err)
 	}
 
 	source.CampaignIds, err = s.listCampaignIdsBySourceId(ctx, id)
 	if err != nil {
-		return models.Source{}, util.OpWrap(op, err)
+		return models.Source{}, ops.Wrap(op, err)
 	}
 	return source, nil
 }
@@ -74,28 +74,28 @@ func (s *storage) listSourcesByIds(ids []int) (map[int]models.Source, error) {
 	defer cancel()
 	rows, err := s.db.QueryContext(ctx, fmt.Sprintf(listSourcesTemplate, strIds), anyIds...)
 	if err != nil {
-		return nil, util.OpWrap(op, err)
+		return nil, ops.Wrap(op, err)
 	}
 	defer rows.Close()
 	sources := make(map[int]models.Source, len(ids))
 	for rows.Next() {
 		var source models.Source
 		if err := rows.Scan(&source.ID, &source.Name, &source.IsActive); err != nil {
-			return nil, util.OpWrap(op, err)
+			return nil, ops.Wrap(op, err)
 		}
 		sources[source.ID] = source
 	}
 	if err := rows.Close(); err != nil {
-		return nil, util.OpWrap(op, err)
+		return nil, ops.Wrap(op, err)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, util.OpWrap(op, err)
+		return nil, ops.Wrap(op, err)
 	}
 
 	for id, source := range sources {
 		source.CampaignIds, err = s.listCampaignIdsBySourceId(context.Background(), id)
 		if err != nil {
-			return nil, util.OpWrap(op, err)
+			return nil, ops.Wrap(op, err)
 		}
 		sources[id] = source
 	}
@@ -116,23 +116,23 @@ func (s *storage) listCampaignIdsBySourceId(ctx context.Context, id int) ([]int,
 
 	rows, err := s.db.QueryContext(ctx, listCampaignIdsBySourceId, id)
 	if err != nil {
-		return nil, util.OpWrap(op, err)
+		return nil, ops.Wrap(op, err)
 	}
 	defer rows.Close()
 
 	for rows.Next() {
 		var campaignId int
 		if err := rows.Scan(&campaignId); err != nil {
-			return nil, util.OpWrap(op, err)
+			return nil, ops.Wrap(op, err)
 		}
 		campaignIds = append(campaignIds, campaignId)
 	}
 
 	if err := rows.Close(); err != nil {
-		return nil, util.OpWrap(op, err)
+		return nil, ops.Wrap(op, err)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, util.OpWrap(op, err)
+		return nil, ops.Wrap(op, err)
 	}
 	return campaignIds, nil
 }

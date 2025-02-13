@@ -17,7 +17,6 @@ import (
 	"github.com/5aradise/adtelligent-test-task/pkg/httpserver"
 	"github.com/5aradise/adtelligent-test-task/pkg/logger"
 	"github.com/5aradise/adtelligent-test-task/pkg/middleware"
-	"github.com/5aradise/adtelligent-test-task/pkg/util"
 )
 
 var configPath = *flag.String("config", "./config.yaml", "Path to config file")
@@ -34,7 +33,7 @@ func main() {
 
 	conn, err := postgresql.New(cfg.DB.URL)
 	if err != nil {
-		l.Error("can't open sql", util.SlErr(err))
+		l.Error("can't open sql", logger.Err(err))
 		os.Exit(1)
 	}
 	defer conn.Close()
@@ -73,11 +72,11 @@ func main() {
 	case s := <-interrupt:
 		l.Error("signal interrupt", slog.String("error", s.String()))
 	case err := <-server.Notify():
-		l.Error("server notify", util.SlErr(err))
+		l.Error("server notify", logger.Err(err))
 	}
 
 	err = server.Shutdown()
 	if err != nil {
-		l.Error("can't shutdown server", util.SlErr(err))
+		l.Error("can't shutdown server", logger.Err(err))
 	}
 }

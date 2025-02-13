@@ -8,8 +8,8 @@ import (
 
 	"github.com/5aradise/adtelligent-test-task/internal/models"
 	"github.com/5aradise/adtelligent-test-task/pkg/api"
+	"github.com/5aradise/adtelligent-test-task/pkg/logger"
 	"github.com/5aradise/adtelligent-test-task/pkg/middleware"
-	"github.com/5aradise/adtelligent-test-task/pkg/util"
 )
 
 type auctionService interface {
@@ -43,7 +43,7 @@ func (h *handler) handleAuction(w http.ResponseWriter, r *http.Request) {
 	if sourceIDStr == "" {
 		err := api.WriteError(w, http.StatusBadRequest, "sourceID query is empty")
 		if err != nil {
-			l.Warn("cannot make response", util.SlErr(err))
+			l.Warn("cannot make response", logger.Err(err))
 		}
 		return
 	}
@@ -51,7 +51,7 @@ func (h *handler) handleAuction(w http.ResponseWriter, r *http.Request) {
 	if maxDurationStr == "" {
 		err := api.WriteError(w, http.StatusBadRequest, "maxDuration query is empty")
 		if err != nil {
-			l.Warn("cannot make response", util.SlErr(err))
+			l.Warn("cannot make response", logger.Err(err))
 		}
 		return
 	}
@@ -60,7 +60,7 @@ func (h *handler) handleAuction(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		err := api.WriteError(w, http.StatusBadRequest, "sourceID query must be a number")
 		if err != nil {
-			l.Warn("cannot make response", util.SlErr(err))
+			l.Warn("cannot make response", logger.Err(err))
 		}
 		return
 	}
@@ -68,7 +68,7 @@ func (h *handler) handleAuction(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		err := api.WriteError(w, http.StatusBadRequest, "maxDuration query must be valid duration")
 		if err != nil {
-			l.Warn("cannot make response", util.SlErr(err))
+			l.Warn("cannot make response", logger.Err(err))
 		}
 		return
 	}
@@ -77,13 +77,13 @@ func (h *handler) handleAuction(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		err := api.WriteError(w, http.StatusBadRequest, err.Error())
 		if err != nil {
-			l.Warn("cannot make response", util.SlErr(err))
+			l.Warn("cannot make response", logger.Err(err))
 		}
 		return
 	}
 
 	err = api.WriteJSON(w, http.StatusOK, creative)
 	if err != nil {
-		l.Warn("cannot make response", util.SlErr(err))
+		l.Warn("cannot make response", logger.Err(err))
 	}
 }
